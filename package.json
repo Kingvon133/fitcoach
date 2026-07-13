@@ -1,0 +1,21 @@
+{
+  "name": "app-peso",
+  "version": "1.0.0",
+  "description": "App **PWA** (web app installabile): si sviluppa da Windows, si installa sull'iPhone da Safari con \"Aggiungi a schermata Home\". Icona, fullscreen, offline, stile iOS nativo. Agente AI Gemini con function calling e ricerca web Google. **Costo: 0€.**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "vite": "^8.1.4"
+  }
+}

@@ -6,7 +6,9 @@
       "Bash(git init *)",
       "Bash(git config *)",
       "Bash(git add *)",
-      "Bash(git commit -m 'feat: initial FitCoach PWA + Swift native baseline *)"
+      "Bash(git commit -m 'feat: initial FitCoach PWA + Swift native baseline *)",
+      "Bash(npm init *)",
+      "Bash(npm install *)"
     ]
   }
 }
