@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "fitcoach-pwa",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8735", "--directory", "pwa"],
+      "port": 8735
+    }
+  ]
+}

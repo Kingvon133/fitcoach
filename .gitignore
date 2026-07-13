@@ -1,0 +1,22 @@
+# Segreti — MAI committare
+Secrets.plist
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.perspectivev3
+!default.perspectivev3
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# macOS
+.DS_Store
