@@ -9,7 +9,7 @@
 // supabase.com, esegui supabase/schema.sql nel suo SQL editor, poi incolla qui
 // Project URL e anon public key (Project Settings → API). Guida completa:
 // docs/SUPABASE_SETUP.md
-export const SUPABASE_URL = '';
-export const SUPABASE_ANON_KEY = '';
+export const SUPABASE_URL = 'https://cypwqbubmfxeicujwwmb.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5cHdxYnVibWZ4ZWljdWp3d21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzODc1MDMsImV4cCI6MjEwNDk2MzUwM30.cvVrf5Ubcwd4uMTObTFlyw2B0aPBpBTOhh38TZY6-uA';
 
 export const SUPABASE_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
