@@ -34,11 +34,29 @@ export function renderMarkdown(text) {
   return html || '<p></p>';
 }
 
+let gradientSeq = 0;
+const GRADIENTS = {
+  green: ['#30d158', '#0acf83'],
+  orange: ['#ff9f0a', '#ff6482'],
+  blue: ['#0a84ff', '#5e5ce6'],
+  purple: ['#bf5af2', '#af52de'],
+};
+
+function gradientDef(colorKey) {
+  const stops = GRADIENTS[colorKey] || GRADIENTS.green;
+  const id = `fc-grad-${colorKey}-${gradientSeq++}`;
+  const def = `<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="${stops[0]}"/>
+    <stop offset="100%" stop-color="${stops[1]}"/>
+  </linearGradient>`;
+  return { id, def };
+}
+
 /**
- * Line chart SVG minimale (stile Swift Charts).
+ * Line chart SVG minimale (stile Swift Charts), con tratto in gradiente.
  * points: [{label, value}] — ritorna stringa SVG.
  */
-export function lineChart(points, { height = 120, color = 'var(--green)' } = {}) {
+export function lineChart(points, { height = 120, colorKey = 'green' } = {}) {
   if (points.length < 2) return '<p class="muted center">Servono almeno 2 misurazioni.</p>';
 
   const w = 320, h = height, padX = 6, padY = 12;
@@ -52,23 +70,27 @@ export function lineChart(points, { height = 120, color = 'var(--green)' } = {})
   const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   const area = `${path} L${x(points.length - 1).toFixed(1)},${h - padY} L${x(0).toFixed(1)},${h - padY} Z`;
   const last = points[points.length - 1];
+  const { id, def } = gradientDef(colorKey);
 
   return `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img">
-    <path d="${area}" fill="${color}" opacity="0.12"/>
-    <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="${x(points.length - 1).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="4" fill="${color}"/>
+    <defs>${def}</defs>
+    <path d="${area}" fill="url(#${id})" opacity="0.14"/>
+    <path d="${path}" fill="none" stroke="url(#${id})" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${x(points.length - 1).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="4.5" fill="url(#${id})"/>
   </svg>`;
 }
 
-/** Anello progresso SVG (kcal). */
-export function progressRing(progress, { size = 116, stroke = 11, color = 'var(--green)' } = {}) {
+/** Anello progresso SVG (kcal), con tratto in gradiente. */
+export function progressRing(progress, { size = 116, stroke = 12, colorKey = 'green' } = {}) {
   const clamped = Math.min(Math.max(progress, 0), 1);
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const offset = c * (1 - clamped);
+  const { id, def } = gradientDef(colorKey);
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <defs>${def}</defs>
     <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--fill)" stroke-width="${stroke}"/>
-    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${stroke}"
       stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}"
       transform="rotate(-90 ${size / 2} ${size / 2})" style="transition: stroke-dashoffset 0.5s ease"/>
   </svg>`;

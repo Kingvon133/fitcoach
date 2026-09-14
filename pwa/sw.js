@@ -1,5 +1,5 @@
 // Service worker: app shell offline, API sempre in rete.
-const CACHE = 'fitcoach-v1';
+const CACHE = 'fitcoach-v2';
 const SHELL = [
   './',
   'index.html',
@@ -10,6 +10,7 @@ const SHELL = [
   'js/gemini.js',
   'js/tools.js',
   'js/ui.js',
+  'js/icons.js',
   'js/views/dashboard.js',
   'js/views/dieta.js',
   'js/views/workout.js',

@@ -1,7 +1,11 @@
 import { store } from '../store.js';
 import { escapeHtml, showToast } from '../ui.js';
+import { estimateMealFromPhoto, GeminiError } from '../gemini.js';
+import { icon } from '../icons.js';
 
 let addFoodOpen = false;
+let addFoodPrefill = null; // valori precompilati dalla foto AI
+let photoBusy = false;
 
 export function renderDieta(container) {
   const diet = store.getDiet();
@@ -15,6 +19,7 @@ export function renderDieta(container) {
     todayLog.some(e => e.mealName === mealName && e.foodName === foodName);
 
   const mealNames = diet.meals.map(m => m.name);
+  const hasKey = Boolean(store.getSettings().apiKey);
 
   container.innerHTML = `
     <h1 class="page-title">Dieta</h1>
@@ -23,7 +28,16 @@ export function renderDieta(container) {
       Per sostituzioni chiedi al <b>Coach</b>.
     </p>
 
-    <div class="section-title">Diario di oggi</div>
+    <button class="photo-cta" id="photo-cta" ${photoBusy ? 'disabled' : ''}>
+      <span class="photo-cta-icon">${photoBusy ? '<span class="spinner light"></span>' : icon('camera')}</span>
+      <span class="photo-cta-text">
+        <span class="photo-cta-title">${photoBusy ? 'Sto analizzando la foto…' : 'Fotografa il piatto'}</span>
+        <span class="photo-cta-sub">${photoBusy ? 'Qualche secondo, ricevo la stima dall’AI' : 'Stima calorie e macro automaticamente'}</span>
+      </span>
+    </button>
+    <input type="file" accept="image/*" capture="environment" id="photo-input" hidden>
+
+    <div class="section-title"><span class="section-icon accent-green">${icon('check')}</span>Diario di oggi</div>
     <div class="card">
       ${todayLog.length === 0
         ? '<p class="muted">Nessun alimento registrato oggi.</p>'
@@ -33,9 +47,9 @@ export function renderDieta(container) {
               <div>${escapeHtml(entry.foodName)}</div>
               <div class="sub">${escapeHtml(entry.mealName)} · ${Math.round(entry.grams)}g · ${Math.round(entry.kcal)} kcal</div>
             </div>
-            <button class="diary-remove" data-remove-log="${entry.ts}" aria-label="Rimuovi">✕</button>
+            <button class="icon-btn danger" data-remove-log="${entry.ts}" aria-label="Rimuovi">${icon('close')}</button>
           </div>`).join('')}
-      ${addFoodOpen ? addFoodForm(mealNames) : `<button class="btn small mt8" id="toggle-add-food">+ Alimento libero</button>`}
+      ${addFoodOpen ? addFoodForm(mealNames, addFoodPrefill) : `<button class="btn small mt8" id="toggle-add-food">+ Alimento libero</button>`}
     </div>
 
     ${diet.meals.map(meal => `
@@ -51,7 +65,7 @@ export function renderDieta(container) {
             </div>
             <button class="food-log-btn ${done ? 'done' : ''}"
               data-meal="${escapeHtml(meal.name)}" data-food="${escapeHtml(food.name)}"
-              aria-label="${done ? 'Già registrato' : 'Registra'}">${done ? '✓' : '+'}</button>
+              aria-label="${done ? 'Già registrato' : 'Registra'}">${done ? icon('check') : icon('plus')}</button>
           </div>`;
         }).join('')}
       </div>
@@ -67,7 +81,6 @@ export function renderDieta(container) {
       if (!food) return;
 
       if (btn.classList.contains('done')) {
-        // Rimuove il log di oggi per questo alimento
         const entry = store.getTodayFoodLog().find(e => e.mealName === mealName && e.foodName === foodName);
         if (entry) store.removeFoodLog(entry.ts);
         showToast(`${food.name} rimosso dal diario`);
@@ -102,6 +115,7 @@ export function renderDieta(container) {
   if (cancelBtn) {
     cancelBtn.addEventListener('click', () => {
       addFoodOpen = false;
+      addFoodPrefill = null;
       renderDieta(container);
     });
   }
@@ -124,34 +138,117 @@ export function renderDieta(container) {
       }
       store.addFoodLog({ mealName, foodName, grams, kcal, protein, carbs, fat });
       addFoodOpen = false;
+      addFoodPrefill = null;
       showToast(`${foodName} registrato ✓`);
       renderDieta(container);
     });
   }
+
+  const photoInput = container.querySelector('#photo-input');
+  const photoCta = container.querySelector('#photo-cta');
+  if (photoCta && photoInput) {
+    photoCta.addEventListener('click', () => {
+      if (!hasKey) {
+        showToast('Configura prima la API key nella tab Altro');
+        return;
+      }
+      photoInput.value = '';
+      photoInput.click();
+    });
+    photoInput.addEventListener('change', async () => {
+      const file = photoInput.files?.[0];
+      if (!file) return;
+      photoBusy = true;
+      renderDieta(container);
+      try {
+        const { data, mimeType } = await resizeImageToBase64(file);
+        const result = await estimateMealFromPhoto(data, mimeType);
+        if (!result.items || result.items.length === 0) {
+          showToast('Nessun alimento riconosciuto. Riprova o aggiungi a mano.');
+          addFoodOpen = true;
+          addFoodPrefill = null;
+        } else {
+          addFoodPrefill = combineItems(result.items, guessMealName(mealNames));
+          addFoodOpen = true;
+          if (result.note) showToast(result.note);
+        }
+      } catch (error) {
+        const message = error instanceof GeminiError ? error.message : 'Analisi foto non riuscita. Riprova.';
+        showToast(message);
+      } finally {
+        photoBusy = false;
+        renderDieta(container);
+      }
+    });
+  }
 }
 
-function addFoodForm(mealNames) {
+function combineItems(items, mealName) {
+  const sum = (key) => Math.round(items.reduce((acc, it) => acc + (Number(it[key]) || 0), 0));
+  const names = items.map(it => it.name).filter(Boolean);
+  const label = names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', ');
+  return {
+    mealName,
+    foodName: label || 'Piatto fotografato',
+    grams: sum('grams'),
+    kcal: sum('kcal'),
+    protein: sum('protein'),
+    carbs: sum('carbs'),
+    fat: sum('fat'),
+  };
+}
+
+function guessMealName(mealNames) {
+  const hour = new Date().getHours();
+  const guess = hour < 11 ? 'Colazione' : hour < 15 ? 'Pranzo' : hour < 18 ? 'Spuntino' : 'Cena';
+  return mealNames.find(m => m.toLowerCase() === guess.toLowerCase()) || mealNames[0] || guess;
+}
+
+/** Ridimensiona l'immagine lato client (max 1024px, JPEG) prima di inviarla all'AI. */
+function resizeImageToBase64(file, maxDim = 1024, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > height && width > maxDim) { height = Math.round((height * maxDim) / width); width = maxDim; }
+      else if (height > maxDim) { width = Math.round((width * maxDim) / height); height = maxDim; }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      resolve({ data: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Immagine non valida')); };
+    img.src = url;
+  });
+}
+
+function addFoodForm(mealNames, prefill) {
+  const v = prefill || {};
   return `
     <div class="add-food-form mt8">
+      ${prefill ? `<div class="banner ok" style="margin-top:0">✨ Stima dalla foto — controlla e correggi se serve</div>` : ''}
       <div class="field">
         <label for="af-meal">Pasto</label>
         <select id="af-meal">
-          ${mealNames.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('')}
-          <option value="Fuori pasto">Fuori pasto</option>
+          ${mealNames.map(m => `<option value="${escapeHtml(m)}" ${v.mealName === m ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('')}
+          <option value="Fuori pasto" ${v.mealName === 'Fuori pasto' ? 'selected' : ''}>Fuori pasto</option>
         </select>
       </div>
       <div class="field">
         <label for="af-name">Alimento</label>
-        <input id="af-name" type="text" placeholder="es. Barretta proteica">
+        <input id="af-name" type="text" placeholder="es. Barretta proteica" value="${escapeHtml(v.foodName || '')}">
       </div>
       <div class="af-grid">
-        <div class="field"><label for="af-grams">Grammi</label><input id="af-grams" type="number" inputmode="decimal" min="0" step="1"></div>
-        <div class="field"><label for="af-kcal">Kcal</label><input id="af-kcal" type="number" inputmode="decimal" min="0" step="1"></div>
+        <div class="field"><label for="af-grams">Grammi</label><input id="af-grams" type="number" inputmode="decimal" min="0" step="1" value="${v.grams ?? ''}"></div>
+        <div class="field"><label for="af-kcal">Kcal</label><input id="af-kcal" type="number" inputmode="decimal" min="0" step="1" value="${v.kcal ?? ''}"></div>
       </div>
       <div class="af-grid af-grid-3">
-        <div class="field"><label for="af-protein">Proteine (g)</label><input id="af-protein" type="number" inputmode="decimal" min="0" step="1"></div>
-        <div class="field"><label for="af-carbs">Carbo (g)</label><input id="af-carbs" type="number" inputmode="decimal" min="0" step="1"></div>
-        <div class="field"><label for="af-fat">Grassi (g)</label><input id="af-fat" type="number" inputmode="decimal" min="0" step="1"></div>
+        <div class="field"><label for="af-protein">Proteine (g)</label><input id="af-protein" type="number" inputmode="decimal" min="0" step="1" value="${v.protein ?? ''}"></div>
+        <div class="field"><label for="af-carbs">Carbo (g)</label><input id="af-carbs" type="number" inputmode="decimal" min="0" step="1" value="${v.carbs ?? ''}"></div>
+        <div class="field"><label for="af-fat">Grassi (g)</label><input id="af-fat" type="number" inputmode="decimal" min="0" step="1" value="${v.fat ?? ''}"></div>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn small" id="cancel-add-food">Annulla</button>

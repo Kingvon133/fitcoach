@@ -82,6 +82,45 @@ export async function webSearch(query) {
   }
 }
 
+const PHOTO_SYSTEM_PROMPT = `Sei un esperto di nutrizione che analizza foto di piatti. Guarda l'immagine e stima gli alimenti visibili, le grammature realistiche e i valori nutrizionali (kcal, proteine, carboidrati, grassi in grammi).
+Rispondi SOLO con un oggetto JSON valido, senza markdown e senza testo extra, in questo formato esatto:
+{"items":[{"name":"nome alimento","grams":120,"kcal":250,"protein":20,"carbs":10,"fat":8}],"note":"breve nota in italiano su eventuali assunzioni fatte (es. porzione stimata a occhio)"}
+Se nella foto non riconosci cibo, rispondi {"items":[],"note":"spiega perché"}.`;
+
+/**
+ * Analizza la foto di un piatto e stima alimenti + valori nutrizionali.
+ * base64Data: stringa base64 (senza prefisso data:), mimeType es. 'image/jpeg'.
+ */
+export async function estimateMealFromPhoto(base64Data, mimeType) {
+  const candidate = await generateContent({
+    systemPrompt: PHOTO_SYSTEM_PROMPT,
+    contents: [{
+      role: 'user',
+      parts: [
+        { inlineData: { mimeType, data: base64Data } },
+        { text: 'Analizza questo piatto e stima alimenti e valori nutrizionali.' },
+      ],
+    }],
+  });
+
+  const text = (candidate.content.parts || []).map(p => p.text).filter(Boolean).join('\n');
+  const parsed = parseJsonLoose(text);
+  if (!parsed || !Array.isArray(parsed.items)) {
+    throw new GeminiError('Non sono riuscito ad analizzare la foto. Riprova con un\'inquadratura più chiara.');
+  }
+  return parsed;
+}
+
+function parseJsonLoose(text) {
+  const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  try { return JSON.parse(cleaned); } catch { /* fallthrough */ }
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) {
+    try { return JSON.parse(match[0]); } catch { /* fallthrough */ }
+  }
+  return null;
+}
+
 /**
  * Loop agentico. history = array di ChatMessage {role: 'user'|'assistant', text}.
  * onActivity(label) aggiorna la UI ("Sto cercando sul web…").

@@ -7,10 +7,10 @@ App **PWA** (web app installabile): si sviluppa da Windows, si installa sull'iPh
 ## Cosa fa
 
 - **Oggi**: anello calorie, barre macro, allenamento del giorno, grafico peso
-- **Dieta**: dieta preimpostata, tocca **+** per registrare un alimento mangiato
+- **Dieta**: dieta preimpostata, tocca **+** per registrare un alimento mangiato, diario di oggi con eliminazione, alimento libero a mano, **📷 fotografa il piatto** per una stima calorie/macro via AI (Gemini Vision)
 - **Workout**: scheda per giorni, logger serie (kg × reps) con valori precompilati dall'ultima sessione, grafico progressione carico per esercizio
 - **Coach**: agente AI con accesso totale ai tuoi dati. Registra pasti descritti a parole, propone alternative isocaloriche, sostituisce esercizi nella scheda, analizza la progressione, **cerca sul web** (tabelle nutrizionali, evidenze scientifiche) citando fonti
-- **Altro**: API key, peso corporeo, export dati JSON
+- **Altro**: API key, peso corporeo (con storico ed eliminazione), export dati JSON
 
 Dati salvati **solo sul dispositivo** (localStorage). Nessun server, nessun account.
 
@@ -71,6 +71,10 @@ Al primo avvio carica esempi (`pwa/js/store.js`, funzione `seedIfNeeded`). Due m
 
 L'agente ha un tool `search_web`: quando lo chiama, l'app esegue una **seconda chiamata Gemini** con il tool nativo `googleSearch` (grounding). Risultati con fonti reali, nessuna chiave aggiuntiva. Dettagli: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Fotografa il piatto
+
+Nella tab **Dieta**, il bottone **Fotografa il piatto** apre la fotocamera (o la libreria foto), ridimensiona l'immagine sul dispositivo e la invia a Gemini (multimodale) chiedendo una stima JSON di alimenti, grammature e macro. Il risultato precompila il form "Alimento libero": controlli, correggi se serve, e confermi tu prima che venga salvato — l'AI non registra nulla in autonomia. Richiede la stessa API key gratuita del Coach.
+
 ## Struttura
 
 ```
@@ -85,7 +89,8 @@ pwa/
     ├── store.js             # Persistenza localStorage + seed
     ├── gemini.js            # Client Gemini + loop agentico
     ├── tools.js             # 10 tool dell'agente
-    ├── ui.js                # Markdown sicuro, grafici SVG, toast
+    ├── ui.js                # Markdown sicuro, grafici SVG (gradiente), toast
+    ├── icons.js             # Set icone SVG (tab bar, azioni)
     └── views/               # dashboard, dieta, workout, chat, altro
 FitCoach/                    # Versione Swift nativa (richiede Mac)
 docs/ARCHITECTURE.md         # Architettura e scelte tecniche

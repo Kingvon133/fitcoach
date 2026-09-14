@@ -74,7 +74,7 @@ function exerciseCard(exercise, dayName) {
       ${history.length >= 2 ? `
         <div class="mt16">
           <div class="muted" style="margin-bottom:6px">Progressione carico massimo (kg)</div>
-          ${lineChart(history.map(h => ({ label: h.date, value: h.top })), { height: 90, color: 'var(--blue)' })}
+          ${lineChart(history.map(h => ({ label: h.date, value: h.top })), { height: 90, colorKey: 'blue' })}
         </div>` : ''}
     ` : ''}
   </div>`;

@@ -1,4 +1,5 @@
 import { seedIfNeeded } from './store.js';
+import { icon } from './icons.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderDieta } from './views/dieta.js';
 import { renderWorkout } from './views/workout.js';
@@ -36,6 +37,10 @@ tabbar.addEventListener('click', (event) => {
 // L'agente ha modificato dieta/scheda/log: aggiorna la vista corrente (tranne la chat, che si gestisce da sola)
 window.addEventListener('fc:data-changed', () => {
   if (currentTab !== 'coach') VIEWS[currentTab](view);
+});
+
+tabbar.querySelectorAll('.tab-icon[data-icon]').forEach(el => {
+  el.innerHTML = icon(el.dataset.icon);
 });
 
 seedIfNeeded();

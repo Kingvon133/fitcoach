@@ -1,5 +1,6 @@
 import { store } from '../store.js';
 import { escapeHtml, showToast, lineChart, formatDateShort } from '../ui.js';
+import { icon } from '../icons.js';
 
 export function renderAltro(container) {
   const settings = store.getSettings();
@@ -9,7 +10,7 @@ export function renderAltro(container) {
   container.innerHTML = `
     <h1 class="page-title">Altro</h1>
 
-    <div class="section-title">Coach AI — API key (gratuita)</div>
+    <div class="section-title"><span class="section-icon accent-purple">${icon('sparkles')}</span>Coach AI — API key (gratuita)</div>
     <div class="card">
       ${settings.apiKey
         ? '<div class="banner ok">✓ API key configurata: il Coach è attivo.</div>'
@@ -33,7 +34,7 @@ export function renderAltro(container) {
       <button class="btn primary" id="save-settings">Salva</button>
     </div>
 
-    <div class="section-title">Peso corporeo</div>
+    <div class="section-title"><span class="section-icon accent-blue">${icon('scale')}</span>Peso corporeo</div>
     <div class="card">
       <div class="field">
         <label for="weight-input">Peso di oggi (kg)</label>
@@ -41,7 +42,7 @@ export function renderAltro(container) {
           placeholder="${last ? last.kg.toFixed(1) : 'es. 78.5'}">
       </div>
       <button class="btn primary" id="save-weight">Registra</button>
-      ${weights.length >= 2 ? `<div class="mt16">${lineChart(weights.slice(-60).map(w => ({ label: w.date, value: w.kg })))}</div>` : ''}
+      ${weights.length >= 2 ? `<div class="mt16">${lineChart(weights.slice(-60).map(w => ({ label: w.date, value: w.kg })), { colorKey: 'purple' })}</div>` : ''}
     </div>
 
     ${weights.length > 0 ? `
@@ -51,12 +52,12 @@ export function renderAltro(container) {
           <span>${formatDateShort(w.date)}</span>
           <div style="display:flex;align-items:center;gap:10px">
             <span class="right">${w.kg.toFixed(1)} kg</span>
-            <button class="weight-remove" data-remove-weight="${w.date}" aria-label="Elimina">✕</button>
+            <button class="icon-btn danger" data-remove-weight="${w.date}" aria-label="Elimina">${icon('close')}</button>
           </div>
         </div>`).join('')}
     </div>` : ''}
 
-    <div class="section-title">Dati</div>
+    <div class="section-title"><span class="section-icon accent-green">${icon('folder')}</span>Dati</div>
     <div class="card">
       <div class="list-row">
         <div>

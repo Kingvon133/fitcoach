@@ -1,6 +1,7 @@
 import { store } from '../store.js';
 import { runAgent, GeminiError } from '../gemini.js';
 import { escapeHtml, renderMarkdown } from '../ui.js';
+import { icon } from '../icons.js';
 
 let isBusy = false;
 
@@ -24,7 +25,7 @@ export function renderChat(container) {
       </div>
       <div class="chat-inputbar">
         <textarea id="chat-input" rows="1" placeholder="Chiedi al tuo coach…" ${isBusy ? 'disabled' : ''}></textarea>
-        <button class="send-btn" id="chat-send" ${isBusy ? 'disabled' : ''} aria-label="Invia">↑</button>
+        <button class="send-btn" id="chat-send" ${isBusy ? 'disabled' : ''} aria-label="Invia">${icon('send')}</button>
       </div>
     </div>
   `;
@@ -62,7 +63,7 @@ export function renderChat(container) {
 function emptyState() {
   return `
     <div class="empty-hero">
-      <div class="big">🏃</div>
+      <div class="big"><span class="hero-glyph">${icon('sparkles')}</span></div>
       <h2>Il tuo coach personale</h2>
       <p>Conosce la tua dieta, la tua scheda e i tuoi progressi.<br>Può cercare sul web e modificare i tuoi piani.</p>
     </div>
