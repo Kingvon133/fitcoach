@@ -12,7 +12,7 @@ export function renderDashboard(container) {
   const over = kcal > targets.kcal && targets.kcal > 0;
 
   const workout = store.getWorkout();
-  const todayDay = pickTodayWorkout(workout);
+  const { day: todayDay, restNote } = pickTodayWorkout(workout);
   const weights = store.getWeights().slice(-30);
 
   container.innerHTML = `
@@ -53,6 +53,12 @@ export function renderDashboard(container) {
             <span class="right">${e.sets} × ${escapeHtml(String(e.reps))}</span>
           </div>`).join('')}
         ${todayDay.exercises.length > 4 ? `<p class="muted mt8">+ ${todayDay.exercises.length - 4 === 1 ? '1 altro esercizio' : `altri ${todayDay.exercises.length - 4} esercizi`}</p>` : ''}
+      </div>` : restNote ? `
+      <div class="card mt16">
+        <div class="card-header">
+          <span><span class="inline-icon accent-blue">${icon('dumbbell')}</span>Oggi</span>
+        </div>
+        <p class="muted">🚶 ${escapeHtml(restNote)}</p>
       </div>` : ''}
 
     ${weights.length >= 2 ? `
@@ -81,8 +87,17 @@ function macroCell(name, value, target, cellClass, barColor) {
 
 function pickTodayWorkout(workout) {
   const days = workout?.days;
-  if (!days?.length) return null;
-  const weekday = new Date().getDay(); // 0 = domenica
-  const index = ((weekday - 1) % days.length + days.length) % days.length; // lunedì = giorno 0
-  return days[index];
+  if (!days?.length) return { day: null, restNote: null };
+  const todayIndex = (new Date().getDay() + 6) % 7; // 0 = lunedì … 6 = domenica
+
+  // Piani con giorni "programmati" (weekdays): trova il giorno di oggi, altrimenti nota di riposo/cardio.
+  if (days.some(d => Array.isArray(d.weekdays))) {
+    const day = days.find(d => d.weekdays?.includes(todayIndex));
+    if (day) return { day, restNote: null };
+    return { day: null, restNote: workout.restSchedule?.[todayIndex] || null };
+  }
+
+  // Piani "a rotazione" senza giorni fissi (es. PPL): ciclo semplice sulla lunghezza dei giorni.
+  const index = ((todayIndex % days.length) + days.length) % days.length;
+  return { day: days[index], restNote: null };
 }

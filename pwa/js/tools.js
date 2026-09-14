@@ -31,9 +31,10 @@ export const toolDeclarations = [
   },
   {
     name: 'replace_planned_food',
-    description: "Sostituisce un alimento nella dieta preimpostata con un'alternativa. Chiedi conferma all'utente prima di chiamarla.",
+    description: "Sostituisce un alimento nella dieta preimpostata con un'alternativa. Chiedi conferma all'utente prima di chiamarla. La dieta ha pasti fissi (Colazione, Spuntino mattina, Spuntino pomeriggio, Extra giornaliero) uguali ogni giorno, e Pranzo/Cena che cambiano per ogni giorno della settimana: per questi ultimi specifica day_name (es. 'Lunedì'), per i pasti fissi ometti day_name.",
     parameters: obj({
-      meal_name: str("Pasto che contiene l'alimento"),
+      day_name: str("Giorno della settimana (es. Lunedì) se l'alimento è in Pranzo o Cena, che variano per giorno. Ometti per i pasti fissi."),
+      meal_name: str("Pasto che contiene l'alimento (es. Colazione, Pranzo, Cena, Spuntino mattina)"),
       old_food_name: str('Alimento da sostituire'),
       new_food_name: str('Nuovo alimento'),
       grams: num('Grammi del nuovo alimento'),
@@ -114,16 +115,23 @@ function notifyDataChanged() {
   window.dispatchEvent(new CustomEvent('fc:data-changed'));
 }
 
+function mapMeal(m) {
+  return {
+    name: m.name,
+    foods: m.foods.map(f => ({ name: f.name, grams: f.grams, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat })),
+  };
+}
+
 function getDietPlan() {
   const diet = store.getDiet();
   if (!diet) return { error: 'Nessuna dieta configurata' };
   return {
     plan_name: diet.name,
     targets: diet.targets,
-    meals: diet.meals.map(m => ({
-      name: m.name,
-      foods: m.foods.map(f => ({ name: f.name, grams: f.grams, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat })),
-    })),
+    restrictions: diet.restrictions || [],
+    notes: diet.notes || [],
+    fixed_meals_every_day: diet.fixedMeals.map(mapMeal),
+    days: diet.days.map(d => ({ day_name: d.name, meals: d.meals.map(mapMeal) })),
   };
 }
 
@@ -151,9 +159,20 @@ function logFood(args) {
 function replacePlannedFood(args) {
   const diet = store.getDiet();
   if (!diet) return { error: 'Nessuna dieta configurata' };
-  const meal = diet.meals.find(m => m.name.toLowerCase().includes(String(args.meal_name || '').toLowerCase()));
+
+  const mealName = String(args.meal_name || '').toLowerCase();
+  let meals = diet.fixedMeals;
+  let context = 'pasti fissi';
+  if (args.day_name) {
+    const day = diet.days.find(d => d.name.toLowerCase().includes(String(args.day_name).toLowerCase()));
+    if (!day) return { error: `Giorno '${args.day_name}' non trovato` };
+    meals = day.meals;
+    context = day.name;
+  }
+
+  const meal = meals.find(m => m.name.toLowerCase().includes(mealName));
   const food = meal?.foods.find(f => f.name.toLowerCase().includes(String(args.old_food_name || '').toLowerCase()));
-  if (!food) return { error: `Alimento '${args.old_food_name}' non trovato nel pasto '${args.meal_name}'` };
+  if (!food) return { error: `Alimento '${args.old_food_name}' non trovato nel pasto '${args.meal_name}' (${context})` };
 
   const oldName = food.name;
   Object.assign(food, {
@@ -163,7 +182,7 @@ function replacePlannedFood(args) {
   });
   store.saveDiet(diet);
   notifyDataChanged();
-  return { status: 'sostituito', detail: `${oldName} -> ${args.new_food_name} in ${meal.name}` };
+  return { status: 'sostituito', detail: `${oldName} -> ${args.new_food_name} in ${meal.name} (${context})` };
 }
 
 function getWorkoutPlan() {

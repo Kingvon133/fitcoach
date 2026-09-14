@@ -258,6 +258,31 @@ input, select, textarea { font: inherit; color: var(--text); }
 
 .diary-row .sub { color: var(--text2); }
 
+.diet-notes { margin-bottom: 16px; }
+.diet-restrictions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.chip-warn {
+  display: inline-flex; align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--tint-red);
+  color: var(--red);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.diet-note-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.diet-note-list li {
+  font-size: 12.5px;
+  color: var(--text2);
+  padding-left: 14px;
+  position: relative;
+}
+.diet-note-list li::before {
+  content: '';
+  position: absolute; left: 0; top: 6px;
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--text3);
+}
+
 /* CTA foto piatto */
 .photo-cta {
   width: 100%;

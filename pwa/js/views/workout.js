@@ -1,6 +1,8 @@
 import { store } from '../store.js';
 import { escapeHtml, showToast, lineChart, formatDateShort } from '../ui.js';
 
+const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+
 let activeDayIndex = 0;
 let openExercise = null; // nome esercizio con logger aperto
 
@@ -12,17 +14,26 @@ export function renderWorkout(container) {
   }
   if (activeDayIndex >= plan.days.length) activeDayIndex = 0;
   const day = plan.days[activeDayIndex];
+  const todayIndex = (new Date().getDay() + 6) % 7;
+  const restToday = !day.weekdays?.includes(todayIndex) ? plan.restSchedule?.[todayIndex] : null;
 
   container.innerHTML = `
     <h1 class="page-title">Workout</h1>
+    ${restToday ? `<div class="banner ok" style="margin-top:-4px">🚶 Oggi: ${escapeHtml(restToday)}</div>` : ''}
     <div class="day-pills">
       ${plan.days.map((d, i) => `
         <button class="pill ${i === activeDayIndex ? 'active' : ''}" data-day="${i}">${escapeHtml(d.name)}</button>
       `).join('')}
     </div>
+    ${day.weekdays ? `<p class="muted" style="margin:-6px 2px 14px">${day.weekdays.map(w => WEEKDAY_LABELS[w]).join(' · ')}</p>` : ''}
     <div id="exercise-list">
       ${day.exercises.map(e => exerciseCard(e, day.name)).join('')}
     </div>
+    ${plan.notes?.length ? `
+      <div class="section-title">Note</div>
+      <div class="card">
+        <ul class="diet-note-list">${plan.notes.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>
+      </div>` : ''}
   `;
 
   container.querySelectorAll('.pill').forEach(pill => {

@@ -6,6 +6,13 @@ import { icon } from '../icons.js';
 let addFoodOpen = false;
 let addFoodPrefill = null; // valori precompilati dalla foto AI
 let photoBusy = false;
+let activeDayIndex = todayDayIndex();
+
+function todayDayIndex() {
+  // 0 = Lunedì … 6 = Domenica (coerente con workout)
+  const weekday = new Date().getDay();
+  return (weekday + 6) % 7;
+}
 
 export function renderDieta(container) {
   const diet = store.getDiet();
@@ -14,11 +21,15 @@ export function renderDieta(container) {
     return;
   }
 
+  if (activeDayIndex >= diet.days.length) activeDayIndex = 0;
+  const activeDay = diet.days[activeDayIndex];
+
   const todayLog = store.getTodayFoodLog();
   const isLogged = (mealName, foodName) =>
     todayLog.some(e => e.mealName === mealName && e.foodName === foodName);
 
-  const mealNames = diet.meals.map(m => m.name);
+  const allMeals = [...diet.fixedMeals, ...activeDay.meals];
+  const mealNames = [...new Set([...diet.fixedMeals.map(m => m.name), 'Pranzo', 'Cena'])];
   const hasKey = Boolean(store.getSettings().apiKey);
 
   container.innerHTML = `
@@ -27,6 +38,12 @@ export function renderDieta(container) {
       Tocca <b>+</b> per registrare un alimento come mangiato oggi.
       Per sostituzioni chiedi al <b>Coach</b>.
     </p>
+
+    ${(diet.restrictions?.length || diet.notes?.length) ? `
+      <div class="diet-notes">
+        ${diet.restrictions?.length ? `<div class="diet-restrictions">${diet.restrictions.map(r => `<span class="chip-warn">${escapeHtml(r)}</span>`).join('')}</div>` : ''}
+        ${diet.notes?.length ? `<ul class="diet-note-list">${diet.notes.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
+      </div>` : ''}
 
     <button class="photo-cta" id="photo-cta" ${photoBusy ? 'disabled' : ''}>
       <span class="photo-cta-icon">${photoBusy ? '<span class="spinner light"></span>' : icon('camera')}</span>
@@ -52,31 +69,29 @@ export function renderDieta(container) {
       ${addFoodOpen ? addFoodForm(mealNames, addFoodPrefill) : `<button class="btn small mt8" id="toggle-add-food">+ Alimento libero</button>`}
     </div>
 
-    ${diet.meals.map(meal => `
-      <div class="section-title">${escapeHtml(meal.name)}</div>
-      <div class="card">
-        ${meal.foods.map(food => {
-          const done = isLogged(meal.name, food.name);
-          return `
-          <div class="list-row food-row">
-            <div>
-              <div>${escapeHtml(food.name)}</div>
-              <div class="sub">${Math.round(food.grams)}g · ${Math.round(food.kcal)} kcal · P ${Math.round(food.protein)} · C ${Math.round(food.carbs)} · G ${Math.round(food.fat)}</div>
-            </div>
-            <button class="food-log-btn ${done ? 'done' : ''}"
-              data-meal="${escapeHtml(meal.name)}" data-food="${escapeHtml(food.name)}"
-              aria-label="${done ? 'Già registrato' : 'Registra'}">${done ? icon('check') : icon('plus')}</button>
-          </div>`;
-        }).join('')}
-      </div>
-    `).join('')}
+    ${diet.fixedMeals.map(meal => mealCard(meal, isLogged)).join('')}
+
+    <div class="section-title" style="margin-top:26px">Pranzo &amp; cena della settimana</div>
+    <div class="day-pills">
+      ${diet.days.map((d, i) => `<button class="pill ${i === activeDayIndex ? 'active' : ''}" data-day="${i}">${escapeHtml(d.name)}</button>`).join('')}
+    </div>
+    <div id="day-meals">
+      ${activeDay.meals.map(meal => mealCard(meal, isLogged)).join('')}
+    </div>
   `;
+
+  container.querySelectorAll('.pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      activeDayIndex = Number(pill.dataset.day);
+      renderDieta(container);
+    });
+  });
 
   container.querySelectorAll('.food-log-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const mealName = btn.dataset.meal;
       const foodName = btn.dataset.food;
-      const meal = diet.meals.find(m => m.name === mealName);
+      const meal = allMeals.find(m => m.name === mealName && m.foods.some(f => f.name === foodName));
       const food = meal?.foods.find(f => f.name === foodName);
       if (!food) return;
 
@@ -168,7 +183,7 @@ export function renderDieta(container) {
           addFoodOpen = true;
           addFoodPrefill = null;
         } else {
-          addFoodPrefill = combineItems(result.items, guessMealName(mealNames));
+          addFoodPrefill = combineItems(result.items, guessMealName());
           addFoodOpen = true;
           if (result.note) showToast(result.note);
         }
@@ -181,6 +196,27 @@ export function renderDieta(container) {
       }
     });
   }
+}
+
+function mealCard(meal, isLogged) {
+  return `
+    <div class="section-title">${escapeHtml(meal.name)}</div>
+    <div class="card">
+      ${meal.foods.map(food => {
+        const done = isLogged(meal.name, food.name);
+        return `
+        <div class="list-row food-row">
+          <div>
+            <div>${escapeHtml(food.name)}</div>
+            <div class="sub">${Math.round(food.grams)}g · ${Math.round(food.kcal)} kcal · P ${Math.round(food.protein)} · C ${Math.round(food.carbs)} · G ${Math.round(food.fat)}</div>
+          </div>
+          <button class="food-log-btn ${done ? 'done' : ''}"
+            data-meal="${escapeHtml(meal.name)}" data-food="${escapeHtml(food.name)}"
+            aria-label="${done ? 'Già registrato' : 'Registra'}">${done ? icon('check') : icon('plus')}</button>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
 }
 
 function combineItems(items, mealName) {
@@ -198,10 +234,12 @@ function combineItems(items, mealName) {
   };
 }
 
-function guessMealName(mealNames) {
+function guessMealName() {
   const hour = new Date().getHours();
-  const guess = hour < 11 ? 'Colazione' : hour < 15 ? 'Pranzo' : hour < 18 ? 'Spuntino' : 'Cena';
-  return mealNames.find(m => m.toLowerCase() === guess.toLowerCase()) || mealNames[0] || guess;
+  if (hour < 11) return 'Colazione';
+  if (hour < 15) return 'Pranzo';
+  if (hour < 18) return 'Spuntino pomeriggio';
+  return 'Cena';
 }
 
 /** Ridimensiona l'immagine lato client (max 1024px, JPEG) prima di inviarla all'AI. */
