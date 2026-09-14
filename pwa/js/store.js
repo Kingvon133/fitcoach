@@ -1,4 +1,8 @@
-// Persistenza locale (localStorage, JSON). Dati solo sul dispositivo.
+// Persistenza locale (localStorage, JSON) + sincronizzazione cloud opzionale (account).
+// Il dispositivo resta sempre la fonte di verità immediata: ogni scrittura salva subito
+// in locale e, se l'utente ha effettuato l'accesso, notifica sync.js per il salvataggio
+// cloud (vedi 'fc:store-write'). La API key (settings) NON viene mai sincronizzata: resta
+// solo sul dispositivo, per scelta di sicurezza/costi.
 
 const KEYS = {
   diet: 'fc_diet',
@@ -9,6 +13,8 @@ const KEYS = {
   chat: 'fc_chat',
   settings: 'fc_settings',
 };
+
+let suppressWriteEvent = false;
 
 function load(key, fallback) {
   try {
@@ -21,6 +27,9 @@ function load(key, fallback) {
 
 function save(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+  if (key !== KEYS.settings && !suppressWriteEvent) {
+    window.dispatchEvent(new CustomEvent('fc:store-write'));
+  }
 }
 
 export function todayKey(date = new Date()) {
@@ -113,140 +122,95 @@ export const store = {
     }
     return dump;
   },
+
+  // --- Sync cloud: sovrascrive lo stato locale con i dati scaricati dall'account ---
+  replaceAll({ diet, foodLog, workout, sessions, weights, chat }) {
+    suppressWriteEvent = true;
+    try {
+      if (diet !== undefined) save(KEYS.diet, diet);
+      if (foodLog !== undefined) save(KEYS.foodLog, foodLog);
+      if (workout !== undefined) save(KEYS.workout, workout);
+      if (sessions !== undefined) save(KEYS.sessions, sessions);
+      if (weights !== undefined) save(KEYS.weights, weights);
+      if (chat !== undefined) save(KEYS.chat, chat);
+    } finally {
+      suppressWriteEvent = false;
+    }
+  },
 };
 
-// Dieta + scheda personali (dalle foto del piano fornito). Modificabili dalla chat o da "Altro".
+const WEEKDAY_NAMES = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+
+// Dieta + scheda d'esempio al primo avvio (nessun account, o account nuovo senza dati).
+// Pensati per essere generici: chi arriva sull'app li personalizza dal Coach, a mano o
+// con la foto del piatto. Se avevi già dati locali (account personale) restano invariati:
+// seedIfNeeded scrive solo se non c'è ancora nulla salvato.
 export function seedIfNeeded() {
   if (!store.getDiet()) {
     store.saveDiet({
-      name: 'Dieta settimanale — Ricomposizione corporea',
-      targets: { kcal: 1950, protein: 175, carbs: 165, fat: 65 },
-      restrictions: ['Zero uova', 'Zero verdure'],
+      name: 'Dieta di esempio — personalizzala!',
+      targets: { kcal: 2200, protein: 150, carbs: 240, fat: 70 },
       notes: [
-        'Idratazione: 2L/giorno',
-        'Olio EVO: 2 cucchiai/giorno (20g totali)',
-        'Whey: 60g di polvere al giorno (es. 2 scoop da 30g)',
+        'Questi sono dati di esempio: sostituiscili con i tuoi dal Coach, a mano o con la foto del piatto',
       ],
-      // Pasti fissi, uguali ogni giorno della settimana.
       fixedMeals: [
         { name: 'Colazione', foods: [
-          { name: 'Plumcake (2 fette)', grams: 60, kcal: 234, protein: 4, carbs: 32, fat: 9 },
-          { name: 'Yogurt greco alla frutta', grams: 150, kcal: 173, protein: 8, carbs: 24, fat: 5 },
+          { name: "Fiocchi d'avena", grams: 80, kcal: 300, protein: 11, carbs: 53, fat: 6 },
+          { name: "Albume d'uovo", grams: 200, kcal: 104, protein: 22, carbs: 1, fat: 0 },
+          { name: 'Banana', grams: 120, kcal: 107, protein: 1, carbs: 27, fat: 0 },
         ]},
-        { name: 'Spuntino mattina', foods: [
-          { name: 'Frutto medio (mela/banana/pera)', grams: 150, kcal: 83, protein: 1, carbs: 20, fat: 0 },
-        ]},
-        { name: 'Spuntino pomeriggio', foods: [
-          { name: 'Affettato magro (fesa tacchino/bresaola)', grams: 80, kcal: 96, protein: 22, carbs: 1, fat: 2 },
-        ]},
-        { name: 'Extra giornaliero', foods: [
-          { name: 'Olio EVO', grams: 20, kcal: 177, protein: 0, carbs: 0, fat: 20 },
-          { name: 'Proteine whey (polvere)', grams: 60, kcal: 228, protein: 45, carbs: 5, fat: 4 },
+        { name: 'Spuntino', foods: [
+          { name: 'Yogurt greco 0%', grams: 170, kcal: 100, protein: 17, carbs: 6, fat: 0 },
+          { name: 'Mandorle', grams: 20, kcal: 120, protein: 4, carbs: 4, fat: 10 },
         ]},
       ],
-      // Pranzo e cena cambiano ogni giorno.
-      days: [
-        { name: 'Lunedì', meals: [
+      // Pranzo e cena: stesso esempio ripetuto ogni giorno — personalizzabile giorno per giorno.
+      days: WEEKDAY_NAMES.map(name => ({
+        name,
+        meals: [
           { name: 'Pranzo', foods: [
-            { name: 'Pasta in bianco', grams: 70, kcal: 252, protein: 8, carbs: 53, fat: 1 },
-            { name: 'Mozzarellata', grams: 150, kcal: 330, protein: 26, carbs: 5, fat: 24 },
+            { name: 'Riso basmati', grams: 100, kcal: 350, protein: 8, carbs: 78, fat: 1 },
+            { name: 'Petto di pollo', grams: 200, kcal: 220, protein: 46, carbs: 0, fat: 3 },
+            { name: 'Olio EVO', grams: 10, kcal: 90, protein: 0, carbs: 0, fat: 10 },
+            { name: 'Verdure miste', grams: 200, kcal: 50, protein: 3, carbs: 8, fat: 0 },
           ]},
           { name: 'Cena', foods: [
-            { name: 'Petto di pollo ai ferri', grams: 280, kcal: 462, protein: 87, carbs: 0, fat: 10 },
-            { name: 'Patate lesse', grams: 150, kcal: 128, protein: 3, carbs: 30, fat: 0 },
+            { name: 'Patate', grams: 300, kcal: 231, protein: 6, carbs: 52, fat: 0 },
+            { name: 'Salmone', grams: 180, kcal: 370, protein: 37, carbs: 0, fat: 24 },
+            { name: 'Verdure miste', grams: 200, kcal: 50, protein: 3, carbs: 8, fat: 0 },
           ]},
-        ]},
-        { name: 'Martedì', meals: [
-          { name: 'Pranzo', foods: [
-            { name: 'Riso', grams: 80, kcal: 288, protein: 6, carbs: 64, fat: 0 },
-            { name: 'Tonno naturale', grams: 250, kcal: 263, protein: 60, carbs: 0, fat: 3 },
-          ]},
-          { name: 'Cena', foods: [
-            { name: 'Riso', grams: 90, kcal: 324, protein: 6, carbs: 72, fat: 1 },
-            { name: 'Parmigiano', grams: 30, kcal: 117, protein: 10, carbs: 0, fat: 9 },
-          ]},
-        ]},
-        { name: 'Mercoledì', meals: [
-          { name: 'Pranzo', foods: [
-            { name: 'Piadina', grams: 70, kcal: 193, protein: 6, carbs: 34, fat: 4 },
-            { name: 'Prosciutto crudo sgrassato', grams: 190, kcal: 304, protein: 53, carbs: 1, fat: 10 },
-          ]},
-          { name: 'Cena', foods: [
-            { name: 'Salmone', grams: 220, kcal: 440, protein: 44, carbs: 0, fat: 29 },
-            { name: 'Pane comune', grams: 100, kcal: 275, protein: 9, carbs: 55, fat: 1 },
-          ]},
-        ]},
-        { name: 'Giovedì', meals: [
-          { name: 'Pranzo', foods: [
-            { name: 'Gnocchi', grams: 170, kcal: 272, protein: 5, carbs: 56, fat: 2 },
-            { name: 'Parmigiano', grams: 25, kcal: 98, protein: 8, carbs: 0, fat: 7 },
-          ]},
-          { name: 'Cena', foods: [
-            { name: 'Fesa di tacchino a cubetti', grams: 300, kcal: 345, protein: 72, carbs: 0, fat: 4.5 },
-            { name: 'Patate lesse', grams: 140, kcal: 119, protein: 3, carbs: 28, fat: 0 },
-          ]},
-        ]},
-        { name: 'Venerdì', meals: [
-          { name: 'Pranzo', foods: [
-            { name: 'Couscous', grams: 70, kcal: 263, protein: 9, carbs: 54, fat: 1 },
-            { name: 'Tonno naturale', grams: 220, kcal: 231, protein: 53, carbs: 0, fat: 2 },
-          ]},
-          { name: 'Cena', foods: [
-            { name: 'Pizza margherita classica', grams: 280, kcal: 800, protein: 32, carbs: 100, fat: 28 },
-          ]},
-        ]},
-        { name: 'Sabato', meals: [
-          { name: 'Pranzo', foods: [
-            { name: 'Pane in cassetta', grams: 120, kcal: 318, protein: 10, carbs: 60, fat: 4 },
-            { name: 'Bresaola', grams: 180, kcal: 270, protein: 58, carbs: 1, fat: 4 },
-          ]},
-          { name: 'Cena', foods: [
-            { name: 'Tagliata di manzo magro', grams: 270, kcal: 513, protein: 84, carbs: 0, fat: 19 },
-            { name: 'Patate al forno', grams: 140, kcal: 154, protein: 3, carbs: 28, fat: 3 },
-          ]},
-        ]},
-        { name: 'Domenica', meals: [
-          { name: 'Pranzo', foods: [
-            { name: 'Pasta corta', grams: 80, kcal: 288, protein: 10, carbs: 60, fat: 1 },
-            { name: 'Ragù di manzo magro (macinato)', grams: 220, kcal: 308, protein: 46, carbs: 4, fat: 13 },
-          ]},
-          { name: 'Cena', foods: [
-            { name: 'Pane rustico tostato', grams: 90, kcal: 261, protein: 8, carbs: 50, fat: 3 },
-            { name: 'Prosciutto cotto sgrassato', grams: 200, kcal: 220, protein: 40, carbs: 2, fat: 6 },
-          ]},
-        ]},
-      ],
+        ],
+      })),
     });
   }
 
   if (!store.getWorkout()) {
     store.saveWorkout({
-      name: 'Full Body — 3x settimana',
-      notes: [
-        'Riscaldamento: 5-10 min di mobilità prima di ogni sessione',
-        'Progressione: aumenta il peso quando fai tutte le rep con buona forma',
-        'Riposo tra le serie: 90-120s sui multiarticolari, 45-60s sul plank',
-        'Durata sessione: circa 35-40 minuti',
-        'Obiettivo generale: 10.000 passi al giorno',
-      ],
+      name: 'Push / Pull / Legs — personalizzala!',
+      notes: ['Scheda di esempio: sostituiscila con la tua dal Coach o dalla tab Workout'],
       days: [
-        { name: 'Full Body', weekdays: [0, 2, 4], exercises: [
-          { name: 'Leg press', muscle: 'Gambe/Quadricipiti', sets: 4, reps: '8-12', rest: 105 },
+        { name: 'Giorno A — Push', exercises: [
+          { name: 'Panca piana bilanciere', muscle: 'Petto', sets: 4, reps: '6-8', rest: 150 },
+          { name: 'Lento avanti manubri', muscle: 'Spalle', sets: 3, reps: '8-10', rest: 120 },
+          { name: 'Panca inclinata manubri', muscle: 'Petto', sets: 3, reps: '8-10', rest: 120 },
+          { name: 'Alzate laterali', muscle: 'Spalle', sets: 3, reps: '12-15', rest: 90 },
+          { name: 'Pushdown ai cavi', muscle: 'Tricipiti', sets: 3, reps: '10-12', rest: 90 },
+        ]},
+        { name: 'Giorno B — Pull', exercises: [
+          { name: 'Stacco da terra', muscle: 'Schiena', sets: 3, reps: '5', rest: 180 },
+          { name: 'Trazioni', muscle: 'Schiena', sets: 4, reps: '6-10', rest: 150 },
+          { name: 'Rematore bilanciere', muscle: 'Schiena', sets: 3, reps: '8-10', rest: 120 },
+          { name: 'Face pull', muscle: 'Spalle posteriori', sets: 3, reps: '12-15', rest: 90 },
+          { name: 'Curl bilanciere', muscle: 'Bicipiti', sets: 3, reps: '10-12', rest: 90 },
+        ]},
+        { name: 'Giorno C — Legs', exercises: [
+          { name: 'Squat bilanciere', muscle: 'Quadricipiti', sets: 4, reps: '6-8', rest: 180 },
+          { name: 'Stacco rumeno', muscle: 'Femorali', sets: 3, reps: '8-10', rest: 150 },
+          { name: 'Leg press', muscle: 'Quadricipiti', sets: 3, reps: '10-12', rest: 120 },
           { name: 'Leg curl', muscle: 'Femorali', sets: 3, reps: '10-12', rest: 90 },
-          { name: 'Chest press machine', muscle: 'Petto', sets: 4, reps: '8-12', rest: 105 },
-          { name: 'Shoulder press machine', muscle: 'Spalle', sets: 3, reps: '10-12', rest: 90 },
-          { name: 'Lat machine presa larga', muscle: 'Dorso', sets: 4, reps: '8-12', rest: 105 },
-          { name: 'Seated row / rematore ai cavi', muscle: 'Dorso centrale', sets: 3, reps: '10-12', rest: 90 },
-          { name: 'Plank', muscle: 'Core', sets: 3, reps: '45-60s', rest: 50 },
+          { name: 'Calf raise in piedi', muscle: 'Polpacci', sets: 4, reps: '12-15', rest: 60 },
         ]},
       ],
-      // indice giorno (0=Lun..6=Dom) -> nota per i giorni senza scheda in sala pesi
-      restSchedule: {
-        1: 'Camminata 30-40 min',
-        3: 'Camminata 30-40 min',
-        5: 'Riposo o camminata leggera',
-        6: 'Riposo o camminata leggera',
-      },
     });
   }
 }

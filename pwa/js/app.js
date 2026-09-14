@@ -1,5 +1,7 @@
 import { seedIfNeeded } from './store.js';
 import { icon } from './icons.js';
+import { initAuth } from './auth.js';
+import './sync.js'; // si auto-registra sugli eventi di scrittura/login, nessuna chiamata esplicita
 import { renderDashboard } from './views/dashboard.js';
 import { renderDieta } from './views/dieta.js';
 import { renderWorkout } from './views/workout.js';
@@ -34,9 +36,15 @@ tabbar.addEventListener('click', (event) => {
   if (btn) switchTab(btn.dataset.tab);
 });
 
-// L'agente ha modificato dieta/scheda/log: aggiorna la vista corrente (tranne la chat, che si gestisce da sola)
+// L'agente (o il pull cloud) ha modificato dieta/scheda/log: aggiorna la vista corrente
+// (tranne la chat, che si gestisce da sola)
 window.addEventListener('fc:data-changed', () => {
   if (currentTab !== 'coach') VIEWS[currentTab](view);
+});
+
+// Stato di sincronizzazione cambiato: aggiorna la tab Altro se è quella aperta
+window.addEventListener('fc:sync-status', () => {
+  if (currentTab === 'altro') VIEWS.altro(view);
 });
 
 tabbar.querySelectorAll('.tab-icon[data-icon]').forEach(el => {
@@ -45,3 +53,4 @@ tabbar.querySelectorAll('.tab-icon[data-icon]').forEach(el => {
 
 seedIfNeeded();
 switchTab(location.hash.replace('#', '') || 'oggi');
+initAuth();

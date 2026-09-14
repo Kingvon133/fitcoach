@@ -10,9 +10,9 @@ App **PWA** (web app installabile): si sviluppa da Windows, si installa sull'iPh
 - **Dieta**: dieta preimpostata, tocca **+** per registrare un alimento mangiato, diario di oggi con eliminazione, alimento libero a mano, **📷 fotografa il piatto** per una stima calorie/macro via AI (Gemini Vision)
 - **Workout**: scheda per giorni, logger serie (kg × reps) con valori precompilati dall'ultima sessione, grafico progressione carico per esercizio
 - **Coach**: agente AI con accesso totale ai tuoi dati. Registra pasti descritti a parole, propone alternative isocaloriche, sostituisce esercizi nella scheda, analizza la progressione, **cerca sul web** (tabelle nutrizionali, evidenze scientifiche) citando fonti
-- **Altro**: API key, peso corporeo (con storico ed eliminazione), export dati JSON
+- **Altro**: account (email/password o Google) con sync cloud opzionale, API key, peso corporeo (con storico ed eliminazione), export dati JSON
 
-Dati salvati **solo sul dispositivo** (localStorage). Nessun server, nessun account.
+Dati salvati **sul dispositivo** (localStorage) e, se crei un account, anche nel cloud — così li ritrovi su qualsiasi telefono. Senza account funziona comunque tutto, solo in locale. Vedi [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) per attivare account e cloud (opzionale, ~5 minuti, gratis).
 
 ## Setup in 3 passi
 
@@ -91,9 +91,15 @@ pwa/
     ├── tools.js             # 10 tool dell'agente
     ├── ui.js                # Markdown sicuro, grafici SVG (gradiente), toast
     ├── icons.js             # Set icone SVG (tab bar, azioni)
+    ├── config.js            # Chiavi pubbliche Supabase (URL + anon key)
+    ├── supabaseClient.js    # Wrapper client Supabase
+    ├── auth.js              # Login/registrazione (email + Google)
+    ├── sync.js              # Sync cloud automatica (push/pull)
     └── views/               # dashboard, dieta, workout, chat, altro
+supabase/schema.sql          # Schema database + Row Level Security
 FitCoach/                    # Versione Swift nativa (richiede Mac)
 docs/ARCHITECTURE.md         # Architettura e scelte tecniche
+docs/SUPABASE_SETUP.md       # Attivare account e sync cloud
 ```
 
 ## Risoluzione problemi

@@ -1,6 +1,11 @@
 import { store } from '../store.js';
 import { escapeHtml, showToast, lineChart, formatDateShort } from '../ui.js';
 import { icon } from '../icons.js';
+import { isCloudEnabled, getUser, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, AuthError } from '../auth.js';
+import { getSyncing } from '../sync.js';
+
+let authMode = 'signin'; // 'signin' | 'signup'
+let authBusy = false;
 
 export function renderAltro(container) {
   const settings = store.getSettings();
@@ -9,6 +14,9 @@ export function renderAltro(container) {
 
   container.innerHTML = `
     <h1 class="page-title">Altro</h1>
+
+    <div class="section-title"><span class="section-icon accent-blue">${icon('user')}</span>Account</div>
+    <div class="card">${accountSection()}</div>
 
     <div class="section-title"><span class="section-icon accent-purple">${icon('sparkles')}</span>Coach AI — API key (gratuita)</div>
     <div class="card">
@@ -121,4 +129,107 @@ export function renderAltro(container) {
       showToast('Conversazione svuotata');
     }
   });
+
+  bindAccount(container);
+}
+
+function accountSection() {
+  if (!isCloudEnabled()) {
+    return `
+      <div class="banner warn">Il salvataggio su account non è ancora attivo su questa installazione.</div>
+      <p class="muted">I tuoi dati restano comunque salvati su questo dispositivo, come sempre.</p>
+    `;
+  }
+
+  const user = getUser();
+  if (user) {
+    const syncing = getSyncing();
+    return `
+      <div class="list-row" style="border-bottom:none;padding-bottom:0">
+        <div>
+          <div>${escapeHtml(user.email || 'Account')}</div>
+          <div class="sub"><span class="inline-icon ${syncing ? 'accent-blue' : 'accent-green'}">${icon('cloud')}</span>${syncing ? 'Sincronizzazione…' : 'Sincronizzato'}</div>
+        </div>
+        <button class="btn small danger" id="sign-out">Esci</button>
+      </div>
+    `;
+  }
+
+  return `
+    <p class="muted" style="margin-bottom:12px">Crea un account per salvare dieta, allenamenti e progressi nel cloud e ritrovarli su qualsiasi dispositivo.</p>
+    <div class="auth-tabs">
+      <button class="auth-tab ${authMode === 'signin' ? 'active' : ''}" data-auth-mode="signin">Accedi</button>
+      <button class="auth-tab ${authMode === 'signup' ? 'active' : ''}" data-auth-mode="signup">Crea account</button>
+    </div>
+    <div class="field">
+      <label for="auth-email">Email</label>
+      <input id="auth-email" type="email" autocomplete="email" placeholder="tuemail@esempio.com">
+    </div>
+    <div class="field">
+      <label for="auth-password">Password</label>
+      <input id="auth-password" type="password" autocomplete="${authMode === 'signup' ? 'new-password' : 'current-password'}" placeholder="Almeno 6 caratteri">
+    </div>
+    <button class="btn primary" id="auth-submit" style="width:100%" ${authBusy ? 'disabled' : ''}>
+      ${authBusy ? 'Un attimo…' : authMode === 'signup' ? 'Crea account' : 'Accedi'}
+    </button>
+    <div class="auth-divider"><span>oppure</span></div>
+    <button class="btn" id="auth-google" style="width:100%" ${authBusy ? 'disabled' : ''}>Continua con Google</button>
+  `;
+}
+
+function bindAccount(container) {
+  const signOutBtn = container.querySelector('#sign-out');
+  if (signOutBtn) {
+    signOutBtn.addEventListener('click', async () => {
+      await signOut();
+      showToast('Disconnesso');
+      renderAltro(container);
+    });
+  }
+
+  container.querySelectorAll('[data-auth-mode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      authMode = btn.dataset.authMode;
+      renderAltro(container);
+    });
+  });
+
+  const submitBtn = container.querySelector('#auth-submit');
+  if (submitBtn) {
+    submitBtn.addEventListener('click', async () => {
+      const email = container.querySelector('#auth-email').value.trim();
+      const password = container.querySelector('#auth-password').value;
+      if (!email || password.length < 6) {
+        showToast('Inserisci email e una password di almeno 6 caratteri');
+        return;
+      }
+      authBusy = true;
+      renderAltro(container);
+      try {
+        if (authMode === 'signup') {
+          const { session } = await signUpWithEmail(email, password);
+          showToast(session ? 'Account creato ✓' : 'Controlla la tua email per confermare l\'account');
+        } else {
+          await signInWithEmail(email, password);
+          showToast('Accesso effettuato ✓');
+        }
+      } catch (error) {
+        showToast(error instanceof AuthError ? error.message : 'Errore imprevisto. Riprova.');
+      } finally {
+        authBusy = false;
+        renderAltro(container);
+      }
+    });
+  }
+
+  const googleBtn = container.querySelector('#auth-google');
+  if (googleBtn) {
+    googleBtn.addEventListener('click', async () => {
+      try {
+        await signInWithGoogle(); // reindirizza fuori dall'app, poi torna autenticato
+      } catch (error) {
+        showToast(error instanceof AuthError ? error.message : 'Errore imprevisto. Riprova.');
+      }
+    });
+  }
 }

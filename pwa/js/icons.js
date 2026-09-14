@@ -26,6 +26,8 @@ const ICONS = {
   leaf: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c9 0 14-5 14-14-9 0-14 5-14 14Z"/><path d="M5 19c0-5 2-8 6-10.5"/></svg>`,
   moon: `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.5 14.8A8.5 8.5 0 1 1 9.2 3.5a7 7 0 0 0 11.3 11.3Z"/></svg>`,
   drop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8c3.2 4 6.5 7.7 6.5 11.4a6.5 6.5 0 1 1-13 0c0-3.7 3.3-7.4 6.5-11.4Z"/></svg>`,
+  user: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.2" r="3.6"/><path d="M4.5 20c1.3-4 4.2-6 7.5-6s6.2 2 7.5 6"/></svg>`,
+  cloud: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5a4.3 4.3 0 0 1-1-8.5 5.5 5.5 0 0 1 10.7-2 4.5 4.5 0 0 1-.7 10.5H7Z"/></svg>`,
 };
 
 export function icon(name, className = '') {
