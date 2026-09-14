@@ -42,8 +42,19 @@ export function renderAltro(container) {
       </div>
       <button class="btn primary" id="save-weight">Registra</button>
       ${weights.length >= 2 ? `<div class="mt16">${lineChart(weights.slice(-60).map(w => ({ label: w.date, value: w.kg })))}</div>` : ''}
-      ${last ? `<p class="muted mt8">Ultima misurazione: <b>${last.kg.toFixed(1)} kg</b> il ${formatDateShort(last.date)}</p>` : ''}
     </div>
+
+    ${weights.length > 0 ? `
+    <div class="card">
+      ${[...weights].reverse().slice(0, 15).map(w => `
+        <div class="list-row weight-row">
+          <span>${formatDateShort(w.date)}</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="right">${w.kg.toFixed(1)} kg</span>
+            <button class="weight-remove" data-remove-weight="${w.date}" aria-label="Elimina">✕</button>
+          </div>
+        </div>`).join('')}
+    </div>` : ''}
 
     <div class="section-title">Dati</div>
     <div class="card">
@@ -83,6 +94,14 @@ export function renderAltro(container) {
     store.addWeight(kg);
     showToast(`Peso registrato: ${kg.toFixed(1)} kg ✓`);
     renderAltro(container);
+  });
+
+  container.querySelectorAll('[data-remove-weight]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      store.removeWeight(btn.dataset.removeWeight);
+      showToast('Misurazione eliminata');
+      renderAltro(container);
+    });
   });
 
   container.querySelector('#export-data').addEventListener('click', () => {

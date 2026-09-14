@@ -189,6 +189,31 @@ input, select, textarea { font: inherit; color: var(--text); }
 }
 .food-log-btn.done { background: var(--green); color: #fff; }
 
+.diary-row .sub { color: var(--text2); }
+.diary-remove {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--red);
+  font-size: 12px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.add-food-form { border-top: 0.5px solid var(--sep); padding-top: 12px; }
+.af-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.af-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+.weight-row .weight-remove {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--red);
+  font-size: 12px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
 /* ---------- Workout ---------- */
 
 .day-pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }

@@ -1,6 +1,11 @@
 # Segreti — MAI committare
 Secrets.plist
 
+# Node / build web
+node_modules/
+dist/
+*.log
+
 # Xcode
 build/
 DerivedData/

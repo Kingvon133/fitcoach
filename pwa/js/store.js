@@ -87,6 +87,9 @@ export const store = {
     list.push({ date: todayKey(), kg });
     save(KEYS.weights, list);
   },
+  removeWeight(date) {
+    save(KEYS.weights, load(KEYS.weights, []).filter(w => w.date !== date));
+  },
 
   // --- Chat ---
   getChat() { return load(KEYS.chat, []); },
