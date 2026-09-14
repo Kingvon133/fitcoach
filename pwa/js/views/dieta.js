@@ -198,9 +198,20 @@ export function renderDieta(container) {
   }
 }
 
+function mealBadge(name) {
+  const n = name.toLowerCase();
+  if (n.includes('colazione')) return { icon: 'sun', accent: 'orange' };
+  if (n.includes('pranzo')) return { icon: 'bowl', accent: 'green' };
+  if (n.includes('cena')) return { icon: 'moon', accent: 'purple' };
+  if (n.includes('spuntino')) return { icon: 'leaf', accent: 'green' };
+  if (n.includes('extra')) return { icon: 'drop', accent: 'blue' };
+  return { icon: 'bowl', accent: 'green' };
+}
+
 function mealCard(meal, isLogged) {
+  const badge = mealBadge(meal.name);
   return `
-    <div class="section-title">${escapeHtml(meal.name)}</div>
+    <div class="section-title"><span class="section-icon accent-${badge.accent} badge-${badge.accent}">${icon(badge.icon)}</span>${escapeHtml(meal.name)}</div>
     <div class="card">
       ${meal.foods.map(food => {
         const done = isLogged(meal.name, food.name);

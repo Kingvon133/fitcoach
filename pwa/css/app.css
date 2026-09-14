@@ -1,58 +1,39 @@
-/* FitCoach — stile "premium", ispirato ad Apple Fitness/Health: superfici chiare
-   e tipografia disciplinata, colore concentrato su anelli, grafici e accenti. */
+/* FitCoach — tema chiaro fisso (stile Yazio/MyFitnessPal su iOS): sfondo bianco/grigio
+   chiarissimo, card bianche con ombra morbida, colore concentrato su anelli, grafici,
+   badge dei pasti e accenti. Il tema NON segue la Dark Mode di sistema, per scelta. */
 
 :root {
-  --bg: #f2f2f7;
+  --bg: #f4f4f7;
   --card: #ffffff;
-  --card2: #f7f7fa;
+  --card2: #f2f2f6;
   --text: #1c1c1e;
   --text2: #6e6e73;
   --text3: #aeaeb2;
   --sep: rgba(60, 60, 67, 0.12);
 
-  --green: #30d158;
-  --green-dark: #248a3d;
+  --green: #22c069;
+  --green-dark: #189253;
   --blue: #0a84ff;
   --orange: #ff9500;
   --purple: #af52de;
   --pink: #ff375f;
   --red: #ff3b30;
 
-  --tint-green: rgba(48, 209, 88, 0.13);
-  --tint-blue: rgba(10, 132, 255, 0.13);
-  --tint-orange: rgba(255, 149, 0, 0.14);
-  --tint-purple: rgba(175, 82, 222, 0.13);
-  --tint-red: rgba(255, 59, 48, 0.13);
+  --tint-green: rgba(34, 192, 105, 0.12)
+;
+  --tint-blue: rgba(10, 132, 255, 0.11);
+  --tint-orange: rgba(255, 149, 0, 0.13);
+  --tint-purple: rgba(175, 82, 222, 0.12);
+  --tint-red: rgba(255, 59, 48, 0.11);
 
-  --fill: rgba(120, 120, 128, 0.14);
-  --bar: rgba(249, 249, 249, 0.78);
+  --fill: rgba(120, 120, 128, 0.12);
+  --bar: rgba(255, 255, 255, 0.82);
   --radius: 20px;
   --radius-sm: 14px;
-  --shadow-card: 0 1px 1px rgba(30, 30, 40, 0.03), 0 10px 26px -14px rgba(30, 30, 40, 0.16);
-  --shadow-pop: 0 14px 34px -10px rgba(20, 20, 30, 0.24);
+  --shadow-card: 0 1px 2px rgba(30, 30, 40, 0.04), 0 10px 24px -16px rgba(30, 30, 40, 0.18);
+  --shadow-pop: 0 14px 34px -10px rgba(20, 20, 30, 0.22);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #000000;
-    --card: #1c1c1e;
-    --card2: #2c2c2e;
-    --text: #f5f5f7;
-    --text2: #98989f;
-    --text3: #636369;
-    --sep: rgba(84, 84, 88, 0.48);
-    --bar: rgba(20, 20, 22, 0.78);
-    --fill: rgba(120, 120, 128, 0.22);
-    --tint-green: rgba(48, 209, 88, 0.17);
-    --tint-blue: rgba(10, 132, 255, 0.19);
-    --tint-orange: rgba(255, 149, 0, 0.18);
-    --tint-purple: rgba(191, 90, 242, 0.19);
-    --tint-red: rgba(255, 69, 58, 0.18);
-    --shadow-card: 0 1px 1px rgba(0, 0, 0, 0.3), 0 12px 28px -14px rgba(0, 0, 0, 0.6);
-    --shadow-pop: 0 16px 36px -10px rgba(0, 0, 0, 0.65);
-  }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -109,6 +90,16 @@ input, select, textarea { font: inherit; color: var(--text); }
   flex-shrink: 0;
 }
 .section-icon svg { width: 13px; height: 13px; }
+
+.section-icon[class*="badge-"] {
+  width: 24px; height: 24px;
+  border-radius: 9px;
+}
+.section-icon[class*="badge-"] svg { width: 13px; height: 13px; }
+.badge-green { background: var(--tint-green); }
+.badge-blue { background: var(--tint-blue); }
+.badge-orange { background: var(--tint-orange); }
+.badge-purple { background: var(--tint-purple); }
 
 .inline-icon {
   display: inline-flex; align-items: center; justify-content: center;
@@ -482,9 +473,6 @@ input, select, textarea { font: inherit; color: var(--text); }
 }
 .banner.warn { background: var(--tint-orange); color: #b5710a; }
 .banner.ok { background: var(--tint-green); color: var(--green-dark); }
-@media (prefers-color-scheme: dark) {
-  .banner.warn { color: #ffb340; }
-}
 
 .chart-svg { width: 100%; height: auto; display: block; }
 
